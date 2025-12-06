@@ -1,6 +1,5 @@
-# Plan for adding Python 3.14 support
+# Plan for addressing generate_bindings feedback
 
-1. Add Python 3.14 entries to metadata and docs to advertise support.
-2. Generate/add Python 3.14 bindings module and register it in the build.
-3. Wire Python 3.14 version detection into interpreter/process handling and update related logic.
-4. Run formatting/checks if applicable and summarize changes.
+1. Clarify the generate_bindings version list by centralizing supported CPython versions.
+2. Update generate_bindings.py to use the shared list and ensure Python 3.14 is included.
+3. Double-check for incidental formatting issues and summarize the change.
