@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_cast)]
 use anyhow::Error;
 
-use crate::python_bindings::v3_13_0;
+use crate::python_bindings::{v3_13_0, v3_14_0};
 use crate::python_interpreters::{
     BytesObject, InterpreterState, ListObject, Object, StringObject, TupleObject, TypeObject,
 };
@@ -72,7 +72,7 @@ pub fn copy_long<P: ProcessMemory>(
     let (size, negative, digit, value_size) = match version {
         Version {
             major: 3,
-            minor: 12..=13,
+            minor: 12..=14,
             ..
         } => {
             // PyLongObject format changed in python 3.12
@@ -192,10 +192,21 @@ impl<'a, P: ProcessMemory> DictIterator<'a, P> {
             // https://github.com/python/cpython/issues/115776
             if flags & PY_TPFLAGS_INLINE_VALUES != 0 {
                 // PyDictValues is stored inline after the initial PyObject
-                let dict_values: v3_13_0::_dictvalues = Default::default();
-                let values_offset = offset_of(&dict_values, &dict_values.values);
+                let values_offset = if version.major == 3 && version.minor >= 14 {
+                    let dict_values: v3_14_0::_dictvalues = Default::default();
+                    offset_of(&dict_values, &dict_values.values)
+                } else {
+                    let dict_values: v3_13_0::_dictvalues = Default::default();
+                    offset_of(&dict_values, &dict_values.values)
+                };
 
-                values_addr = addr + std::mem::size_of::<v3_13_0::PyObject>() + values_offset;
+                let object_size = if version.major == 3 && version.minor >= 14 {
+                    std::mem::size_of::<v3_14_0::PyObject>()
+                } else {
+                    std::mem::size_of::<v3_13_0::PyObject>()
+                };
+
+                values_addr = addr + object_size + values_offset;
             }
 
             let keys: crate::python_bindings::v3_12_0::PyDictKeysObject =
@@ -227,7 +238,7 @@ impl<'a, P: ProcessMemory> DictIterator<'a, P> {
         match version {
             Version {
                 major: 3,
-                minor: 11..=13,
+                minor: 11..=14,
                 ..
             } => {
                 let dict: crate::python_bindings::v3_11_0::PyDictObject =

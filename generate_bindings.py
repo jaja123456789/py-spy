@@ -204,6 +204,7 @@ if __name__ == "__main__":
 
     if args.all:
         versions = [
+            "v3.14.0",
             "v3.13.0",
             "v3.12.0",
             "v3.11.0",
