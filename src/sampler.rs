@@ -114,6 +114,9 @@ impl Sampler {
             for (childpid, parentpid) in process.child_processes()? {
                 // If we can't create the child process, don't worry about it
                 // can happen with zombie child processes etc
+                if spies.contains_key(&childpid) {
+                    continue;
+                }
                 match PythonSpyThread::new(childpid, Some(parentpid), config) {
                     Ok(spy) => {
                         spies.insert(childpid, spy);
@@ -299,7 +302,7 @@ impl PythonSpyThread {
         thread::spawn(move || {
             // We need to create this object inside the thread here since PythonSpy objects don't
             // have the Send trait implemented on linux
-            let mut spy = match PythonSpy::retry_new(pid, &config, 5) {
+            let mut spy = match PythonSpy::retry_new(pid, &config, 50) {
                 Ok(spy) => {
                     if initialized_tx.send(Ok(spy.version.clone())).is_err() {
                         return;
@@ -341,6 +344,9 @@ impl PythonSpyThread {
     }
 
     fn wait_initialized(&mut self) -> bool {
+        if let Some(init) = self.initialized.as_ref() {
+            return init.is_ok();
+        }
         match self.initialized_rx.recv() {
             Ok(status) => {
                 self.running = status.is_ok();
@@ -353,6 +359,7 @@ impl PythonSpyThread {
                     "Failed to get initialization status from PythonSpyThread: {}",
                     e
                 );
+                self.initialized = Some(Err(format_err!("disconnected")));
                 false
             }
         }
@@ -372,6 +379,7 @@ impl PythonSpyThread {
             Err(std::sync::mpsc::TryRecvError::Disconnected) => {
                 // this *shouldn't* happen
                 warn!("Failed to get initialization status from PythonSpyThread: disconnected");
+                self.initialized = Some(Err(format_err!("disconnected")));
                 false
             }
         }
