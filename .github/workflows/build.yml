@@ -84,7 +84,7 @@ jobs:
           name: wheels-windows
           path: dist
         if: runner.os == 'Windows'
-  
+
   test-wheels:
     name: Test Wheels
     needs: [build]
